@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  ServiceName:
+    Type: String
+    Default: application
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+Resources:
+  # EC2ScalaSecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Properties:
+  #     GroupDescription: Allow http and https and ssh and redis to client host
+  #     VpcId: !Ref VpcId
+  #     SecurityGroupIngress:
+  #     - IpProtocol: tcp
+  #       FromPort: '22'
+  #       ToPort: '22'
+  #       CidrIp: '0.0.0.0/0'
+  #     - IpProtocol: tcp
+  #       FromPort: '80'
+  #       ToPort: '80'
+  #       CidrIp: '0.0.0.0/0'
+  #     - IpProtocol: tcp
+  #       FromPort: '443'
+  #       ToPort: '443'
+  #       CidrIp: '0.0.0.0/0'
+  #     SecurityGroupEgress:
+  #     - IpProtocol: '-1'
+  #       CidrIp: 0.0.0.0/0
+  #     Tags:
+  #     - Key: Name
+  #       Value: !Sub "${ServiceName}_scala-security-group"
+
+  # EC2RubySecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Properties:
+  #     GroupDescription: Allow http and https and ssh and redis to client host
+  #     VpcId: !Ref VpcId
+  #     SecurityGroupIngress:
+  #     - IpProtocol: tcp
+  #       FromPort: '22'
+  #       ToPort: '22'
+  #       CidrIp: '0.0.0.0/0'
+  #     - IpProtocol: tcp
+  #       FromPort: '80'
+  #       ToPort: '80'
+  #       CidrIp: '0.0.0.0/0'
+  #     - IpProtocol: tcp
+  #       FromPort: '443'
+  #       ToPort: '443'
+  #       CidrIp: '0.0.0.0/0'
+  #     SecurityGroupEgress:
+  #     - IpProtocol: '-1'
+  #       CidrIp: 0.0.0.0/0
+  #     Tags:
+  #     - Key: Name
+  #       Value: !Sub "${ServiceName}_ruby-security-group"
+  AuroraSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow aurora host
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '3306'
+        ToPort: '3306'
+        CidrIp: '0.0.0.0/0'
+      SecurityGroupEgress:
+      - IpProtocol: '-1'
+        CidrIp: 0.0.0.0/0
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_aurora-security-group"
+
+Outputs:
+  # RubySecurityGroupId:
+  #   Value: !Ref EC2RubySecurityGroup
+  # ScalaSecurityGroupId:
+  #   Value: !Ref EC2ScalaSecurityGroup
+  AuroraSecurityGroupId:
+    Value: !Ref AuroraSecurityGroup

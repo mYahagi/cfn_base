@@ -1,0 +1,285 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  ServiceName:
+    Type: String
+    Default: application
+
+Mappings:
+  Env:
+    common:
+      VpcCidr: 200.11.0.0/16
+      PublicSubnetCidr1: 200.11.0.0/20
+      PublicSubnetCidr2: 200.11.16.0/20
+      PublicSubnetCidr3: 200.11.32.0/20
+      PrivateSubnetCidr1: 200.11.128.0/20
+      PrivateSubnetCidr2: 200.11.144.0/20
+      PrivateSubnetCidr3: 200.11.160.0/20
+
+Resources:
+  BaseVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !FindInMap [Env, common, VpcCidr]
+      EnableDnsHostnames: true
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_vpc"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_vpc-igw"
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref BaseVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref BaseVPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_vpc-public-route"
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      CidrBlock: !FindInMap [Env, common, PublicSubnetCidr1]
+      AvailabilityZone: 'ap-northeast-1a'
+      MapPublicIpOnLaunch: 'true'
+      VpcId: !Ref BaseVPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_public-subnet1"
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      CidrBlock: !FindInMap [Env, common, PublicSubnetCidr2]
+      AvailabilityZone: 'ap-northeast-1c'
+      MapPublicIpOnLaunch: 'true'
+      VpcId: !Ref BaseVPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_public-subnet2"
+
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      CidrBlock: !FindInMap [Env, common, PublicSubnetCidr3]
+      AvailabilityZone: 'ap-northeast-1d'
+      MapPublicIpOnLaunch: 'true'
+      VpcId: !Ref BaseVPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_public-subnet3"
+  
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+  
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet3
+      RouteTableId: !Ref PublicRouteTable
+
+  NatGatewayEIP1:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: BaseVPC
+
+  # NatGatewayEIP2:
+  #   Type: "AWS::EC2::EIP"
+  #   Properties:
+  #     Domain: BaseVPC
+
+  # NatGatewayEIP3:
+  #   Type: "AWS::EC2::EIP"
+  #   Properties:
+  #     Domain: BaseVPC
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    DependsOn: PublicSubnet1
+    Properties:
+      AllocationId: !GetAtt NatGatewayEIP1.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_vpc-ngw1"
+
+  # NatGateway2:
+  #   Type: AWS::EC2::NatGateway
+  #   DependsOn: PublicSubnet2
+  #   Properties:
+  #     AllocationId: !GetAtt NatGatewayEIP2.AllocationId
+  #     SubnetId: !Ref PublicSubnet2
+  #     Tags:
+  #     - Key: Name
+  #       Value: !Sub "${ServiceName}_vpc-ngw2"
+
+  # NatGateway3:
+  #   Type: AWS::EC2::NatGateway
+  #   DependsOn: PublicSubnet3
+  #   Properties:
+  #     AllocationId: !GetAtt NatGatewayEIP3.AllocationId
+  #     SubnetId: !Ref PublicSubnet3
+  #     Tags:
+  #     - Key: Name
+  #       Value: !Sub "${ServiceName}_vpc-ngw3"
+  
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    DependsOn:
+    - NatGatewayEIP1
+    # - NatGatewayEIP2
+    # - NatGatewayEIP3
+    Properties:
+      VpcId: !Ref BaseVPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_vpc-private-route1"
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    DependsOn:
+    - NatGatewayEIP1
+    # - NatGatewayEIP2
+    # - NatGatewayEIP3
+    Properties:
+      VpcId: !Ref BaseVPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_vpc-private-route2"
+
+  PrivateRouteTable3:
+    Type: AWS::EC2::RouteTable
+    DependsOn:
+    - NatGatewayEIP1
+    # - NatGatewayEIP2
+    # - NatGatewayEIP3
+    Properties:
+      VpcId: !Ref BaseVPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_vpc-private-route3"
+
+  PrivateRoute1:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateRoute2:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateRoute3:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      CidrBlock: !FindInMap [Env, common, PrivateSubnetCidr1]
+      AvailabilityZone: 'ap-northeast-1a'
+      MapPublicIpOnLaunch: 'true'
+      VpcId: !Ref BaseVPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_private-subnet1"
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      CidrBlock: !FindInMap [Env, common, PrivateSubnetCidr2]
+      AvailabilityZone: 'ap-northeast-1c'
+      MapPublicIpOnLaunch: 'true'
+      VpcId: !Ref BaseVPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_private-subnet2"
+
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      CidrBlock: !FindInMap [Env, common, PrivateSubnetCidr3]
+      AvailabilityZone: 'ap-northeast-1d'
+      MapPublicIpOnLaunch: 'true'
+      VpcId: !Ref BaseVPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${ServiceName}_private-subnet3"
+
+  PrivateSubnet1RouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
+
+  PrivateSubnet1RouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2
+
+  PrivateSubnet1RouteTableAssociation3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet3
+      RouteTableId: !Ref PrivateRouteTable3
+
+Outputs:
+  VpcId:
+    Value: !Ref BaseVPC
+  PublicSubnet1Id:
+    Value: !Ref PublicSubnet1
+  PublicSubnet2Id:
+    Value: !Ref PublicSubnet2
+  PublicSubnet3Id:
+    Value: !Ref PublicSubnet3
+  PrivateSubnet1Id:
+    Value: !Ref PrivateSubnet1
+  PrivateSubnet2Id:
+    Value: !Ref PrivateSubnet2
+  PrivateSubnet3Id:
+    Value: !Ref PrivateSubnet3

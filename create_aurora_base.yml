@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  ServiceName:
+    Type: String
+    Default: application #ここ小文字じゃないと詰むので注意
+  PublicSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet3Id:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet1Id:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2Id:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet3Id:
+    Type: AWS::EC2::Subnet::Id
+  AuroraSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+
+Resources:
+  AuroraSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties: 
+      DBSubnetGroupDescription: Aurora Subnet Group
+      DBSubnetGroupName: !Sub "${ServiceName}_aurora-subnet-group"
+      SubnetIds:
+        - Ref: PrivateSubnet1Id
+        - Ref: PrivateSubnet2Id
+        - Ref: PrivateSubnet3Id
+  ClusterParameter:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      Family: "aurora-mysql5.7"
+      Description: "Demo DB Cluster Parameter Group"
+      Parameters:
+        init_connect: "SET SESSION time_zone = CASE WHEN POSITION('rds' IN CURRENT_USER()) = 1 THEN 'UTC' ELSE 'Asia/Tokyo' END;"
+        log_bin_trust_function_creators: "1"
+        character_set_database: "utf8mb4"
+        character_set_server: "utf8mb4"
+        skip-character-set-client-handshake: "1"
+  InstanceParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Family: "aurora-mysql5.7"
+      Description: "Demo DB Parameter Group"
+      Parameters:
+        init_connect: "SET SESSION time_zone = CASE WHEN POSITION('rds' IN CURRENT_USER()) = 1 THEN 'UTC' ELSE 'Asia/Tokyo' END;"
+        log_bin_trust_function_creators: "1"
+  # AuroraCluster:
+  #   Type: AWS::RDS::DBCluster
+  #   Properties:
+  #     BackupRetentionPeriod: 1
+  #     DatabaseName: democluster
+  #     DBClusterIdentifier: demo-db-cluster
+  #     DBClusterParameterGroupName:
+  #       Ref: ClusterParameter
+  #     DBSubnetGroupName: !Ref AuroraSubnetGroup
+  #     Engine: aurora
+  #     EngineVersion: 2.07.1
+  #     MasterUsername: admin
+  #     MasterUserPassword: w6BLeExU
+  #     # MasterUserPassword:
+  #     #   Ref: DBMasterPassword
+  #     Port: 3306
+  #     StorageEncrypted: True
+  #     VpcSecurityGroupIds:
+  #       - Ref: AuroraSecurityGroupId
+  # AuroraInstance:
+  #   Type: "AWS::RDS::DBInstance"
+  #   Properties:
+  #     DBClusterIdentifier:
+  #       Ref: AuroraCluster
+  #     DBInstanceIdentifier: demo-db-instance
+  #     AutoMinorVersionUpgrade: False
+  #     DBInstanceClass: db.t3.small
+  #     Engine: aurora
+  #     DBParameterGroupName:
+  #       Ref: InstanceParameterGroup
+  #     PubliclyAccessible: True
+  #     Tags:
+  #       - Key: Name
+  #         Value: AuroraInstance
+# Outputs:
+#   AuroraClusterEndpoint:
+#     Value: !GetAtt AuroraCluster.Endpoint.Address
+#     Export:
+#       Name: !Sub "Demo-AuroraClusterEndpoint"
+#   AuroraClusterReadEndpoint:
+#     Value: !GetAtt AuroraCluster.ReadEndpoint.Address
+#     Export:
+#       Name: !Sub "Demo-AuroraClusterReadEndpoint"

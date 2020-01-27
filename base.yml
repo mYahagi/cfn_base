@@ -1,0 +1,32 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  ServiceName:
+    Type: String
+    Default: demo
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  VPC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://cfn-templetes-${ServiceName}-${Environment}.s3-ap-northeast-1.amazonaws.com/create_vpc.yml
+  SecurityGroup:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://cfn-templetes-${ServiceName}-${Environment}.s3-ap-northeast-1.amazonaws.com/create_security_group.yml
+      Parameters:
+        VpcId: !GetAtt VPC.Outputs.VpcId
+  Aurora:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://cfn-templetes-${ServiceName}-${Environment}.s3-ap-northeast-1.amazonaws.com/create_aurora_base.yml
+      Parameters:
+        PublicSubnet1Id: !GetAtt VPC.Outputs.PublicSubnet1Id
+        PublicSubnet2Id: !GetAtt VPC.Outputs.PublicSubnet2Id
+        PublicSubnet3Id: !GetAtt VPC.Outputs.PublicSubnet3Id
+        PrivateSubnet1Id: !GetAtt VPC.Outputs.PrivateSubnet1Id
+        PrivateSubnet2Id: !GetAtt VPC.Outputs.PrivateSubnet2Id
+        PrivateSubnet3Id: !GetAtt VPC.Outputs.PrivateSubnet3Id
+        AuroraSecurityGroupId: !GetAtt SecurityGroup.Outputs.AuroraSecurityGroupId
